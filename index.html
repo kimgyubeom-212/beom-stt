@@ -34,6 +34,7 @@
     --fs: 22px;
     --dock-h: 88px;
     --eq-h: 116px;
+    --cap-h: 150px;
     --shadow-lg: 0 18px 40px -14px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .05);
     --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", system-ui, sans-serif;
   }
@@ -147,7 +148,9 @@
     overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     padding: 4px 22px calc(var(--dock-h) + env(safe-area-inset-bottom) + 40px);
   }
-  .app.eq-on .scroller { padding-bottom: calc(var(--dock-h) + env(safe-area-inset-bottom) + 40px + var(--eq-h)); }
+  .app.eq-on { --eq-space: var(--eq-h); }
+  .app.cap-on { --cap-space: var(--cap-h); }
+  .app.eq-on .scroller, .app.cap-on .scroller { padding-bottom: calc(var(--dock-h) + env(safe-area-inset-bottom) + 40px + var(--eq-space, 0px) + var(--cap-space, 0px)); }
   .log { max-width: 680px; margin: 0 auto; }
   .day { margin: 18px 0 4px; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
   .para { padding: 14px 0 16px; border-bottom: 1px solid var(--line); }
@@ -215,6 +218,34 @@
   .eq-axis { position: relative; height: 12px; margin-top: 5px; font-size: 10px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
   .eq-axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
   .eq-axis span.end { left: auto !important; right: 0; transform: none; }
+
+  /* ---------- 실시간 자막 창 ---------- */
+  .cap {
+    position: absolute; left: 16px; right: 16px; z-index: 3;
+    bottom: calc(env(safe-area-inset-bottom) + 14px + var(--dock-h) + 10px + var(--eq-space, 0px));
+    max-width: 560px; margin: 0 auto;
+    padding: 12px 16px 14px;
+    border-radius: 22px; border: 1px solid var(--line);
+    background: var(--solid);
+    box-shadow: var(--shadow-lg);
+    transition: opacity .25s ease, transform .3s cubic-bezier(.2, .8, .2, 1), bottom .3s ease, visibility 0s;
+  }
+  .cap.off { opacity: 0; visibility: hidden; transform: translateY(12px); pointer-events: none; transition: opacity .2s ease, transform .25s ease, visibility 0s .25s; }
+  .cap-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .cap-head .dot { width: 6px; height: 6px; }
+  .cap-box {
+    display: flex; flex-direction: column; justify-content: flex-end;
+    height: calc(1.38em * 3); overflow: hidden;
+    font-size: 24px; line-height: 1.38; font-weight: 600; letter-spacing: -.015em;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  #capFinal { color: var(--text); }
+  #capLive { color: var(--muted); }
+  #capLive:not(:empty)::after {
+    content: ""; display: inline-block; width: 2px; height: .9em; margin-left: 3px; vertical-align: -.08em;
+    background: var(--rec); border-radius: 1px; animation: caret 1s steps(2, start) infinite;
+  }
+  .cap-empty { color: var(--faint); font-weight: 500; }
 
   /* ---------- dock ---------- */
   .dock {
@@ -289,7 +320,7 @@
     font: 600 13px/1 var(--font);
     box-shadow: var(--shadow-lg); cursor: pointer;
   }
-  .app.eq-on .jump { bottom: calc(env(safe-area-inset-bottom) + var(--dock-h) + 30px + var(--eq-h)); }
+  .app.eq-on .jump, .app.cap-on .jump { bottom: calc(env(safe-area-inset-bottom) + var(--dock-h) + 30px + var(--eq-space, 0px) + var(--cap-space, 0px)); }
   .jump svg { width: 15px; height: 15px; }
 
   /* ---------- toast ---------- */
@@ -354,6 +385,11 @@
   .switch .thumb { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .22); transition: transform .2s; }
   .switch input:checked + .track { background: var(--ok); }
   .switch input:checked + .track + .thumb { transform: translateX(20px); }
+  .fixes { width: 100%; min-height: 96px; margin: 8px 0 4px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--solid); color: var(--text); font: 500 16px/1.5 var(--font); resize: vertical; }
+  .row.col { flex-direction: column; align-items: stretch; gap: 4px; }
+  .mini { display: flex; gap: 8px; margin: 4px 0 6px; }
+  .mini .btn { height: 40px; font-size: 14px; flex: 1; }
+  .diag-text { margin: 6px 0 4px; font: 500 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-2); white-space: pre-wrap; word-break: break-all; }
   .fine { margin: 14px 4px 14px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
 
   @keyframes ring { from { transform: scale(1); opacity: .75; } to { transform: scale(1.45); opacity: 0; } }
@@ -364,6 +400,21 @@
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
+<script>
+  // 진단용: 페이지에서 오류가 나면 화면 위쪽에 바로 보여 줌
+  (function () {
+    function show(msg) {
+      var box = document.getElementById('diag');
+      if (!box) { box = document.createElement('div'); box.id = 'diag';
+        box.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;padding:10px 12px;border-radius:12px;background:#FF3B30;color:#fff;font:600 13px/1.45 -apple-system,sans-serif;white-space:pre-wrap;word-break:break-all';
+        (document.body || document.documentElement).appendChild(box); }
+      box.textContent = (box.textContent ? box.textContent + '\n' : '') + '오류: ' + msg;
+    }
+    window.addEventListener('error', function (e) { show((e.message || e) + (e.lineno ? ' (줄 ' + e.lineno + ')' : '')); });
+    window.addEventListener('unhandledrejection', function (e) { show(String(e.reason && (e.reason.message || e.reason))); });
+    window.__diagShow = show;
+  })();
+</script>
 </head>
 <body>
 <div class="app" id="app">
@@ -388,7 +439,7 @@
     </div>
     <div class="status" id="status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span>
-      <span id="statusText">대기 중</span>
+      <span id="statusText">앱 불러오는 중…</span>
       <span id="elapsed" class="elapsed" hidden></span>
     </div>
   </header>
@@ -422,6 +473,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
     최신으로
   </button>
+
+  <section id="cap" class="cap off" aria-label="실시간 자막">
+    <div class="cap-head"><span class="dot" aria-hidden="true"></span><span>지금 들리는 말</span></div>
+    <div class="cap-box" aria-live="off"><div><span id="capFinal"></span><span id="capLive"></span><span id="capEmpty" class="cap-empty">말하면 여기에 바로 보여요</span></div></div>
+  </section>
 
   <section id="eq" class="eq off" aria-label="소리 크기 막대">
     <div class="eq-head">
@@ -468,6 +524,13 @@
     <div class="group">
       <div class="row">
         <div>
+          <div class="label">실시간 자막 창</div>
+          <div class="desc">듣는 동안 지금 들리는 말을 아래쪽 창에 큰 글씨로 바로 보여줘요</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="capToggle" role="switch" aria-label="실시간 자막 창"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="row">
+        <div>
           <div class="label">소리 막대(EQ) 보기</div>
           <div class="desc">듣는 소리의 크기를 주파수 대역별 막대로 보여줘요. 폰에 따라 받아쓰기와 함께 안 될 수 있어요.</div>
         </div>
@@ -491,9 +554,26 @@
       <div class="row">
         <div>
           <div class="label">연속 인식 모드</div>
-          <div class="desc">문장 사이에서 말이 자주 끊기면 켜 보세요. 기기에 따라 불안정할 수 있어요.</div>
+          <div class="desc">켜 두면 말을 쉬는 순간에만 다시 시작해서 덜 끊겨요. 아이폰·아이패드 기본값이에요. 끄면 문장마다 다시 시작해요.</div>
         </div>
         <label class="switch"><input type="checkbox" id="contToggle" role="switch" aria-label="연속 인식 모드"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+    </div>
+    <div class="group">
+      <div class="row col">
+        <div class="label">자동 고침 단어장</div>
+        <div class="desc">자주 틀리는 말을 한 줄에 하나씩 <b>틀린 말 → 고칠 말</b>로 적어 두면, 받아쓴 글에서 자동으로 바꿔요. 예: 칠십에서 이백 → 70-200</div>
+        <textarea id="fixesInput" class="fixes" rows="4" placeholder="칠십에서 이백 → 70-200&#10;규범이 → 규범이" spellcheck="false" autocapitalize="off"></textarea>
+        <div class="mini">
+          <button type="button" class="btn" id="fixesSave">단어장 저장</button>
+          <button type="button" class="btn" id="fixesApply">기존 기록에 적용</button>
+        </div>
+      </div>
+      <div class="row col">
+        <div class="label">진단 기록</div>
+        <div class="desc">끊김 원인을 찾을 때 써요. 최근 한 번 들은 기록이에요.</div>
+        <div id="diagText" class="diag-text">아직 기록이 없어요.</div>
+        <div class="mini"><button type="button" class="btn" id="diagCopy">진단 기록 복사</button></div>
       </div>
     </div>
     <button type="button" class="btn danger" id="clearBtn">전체 지우기</button>
@@ -525,15 +605,23 @@
     eqWarm: 1500,       // 소리 막대 시작 직후 충돌 검사를 쉬는 시간
     eqSilentMs: 2500,   // 완전한 무음(0)이 이만큼 이어지면 마이크가 막힌 것으로 판단
     eqStarveMs: 8000,   // (모바일) 말소리는 들리는데 글자가 이만큼 안 나오면 충돌로 판단
+    pauseMs: 1800,      // (iOS 연속) 글자가 이만큼 안 늘면 '쉬는 순간'으로 보고 조용히 다시 시작
+    shortPauseMs: 700,  // 쌓인 글자가 길거나 세션이 오래됐으면 이만큼만 쉬어도 다시 시작
+    bufMax: 120,        // 한 세션에 쌓인 글자가 이보다 길면 짧은 쉼에서 다시 시작
+    sessionMax: 50000,  // 한 세션이 이보다 길면 짧은 쉼에서 다시 시작 (ms)
+    idleRestart: 20000, // 아무 결과 없이 이만큼 지나면 인식기를 새로 고침 (ms)
+    echoMs: 2000,       // 다른 세션의 똑같은 문장이 이 안에 다시 오면 중복으로 봄 (ms)
     debug: false,
   }, window.__LIVE_STT_CFG || {});
   // 소리 막대 모양: 대역 범위(Hz), 표시 범위(dB), 고음 보정(dB/옥타브), LED 칸 수
   const EQB = { fmin: 70, fmax: 11000, floor: -100, ceil: -30, tilt: 3, segs: 12 };
   const KEY = 'live-stt:v1';
+  const DIAG_KEY = 'live-stt:diag';
+  const VERSION = 6;
   const LANGS = { 'ko-KR': '한국어', 'en-US': 'English', 'ja-JP': '日本語', 'zh-CN': '中文' };
 
   // 저장되는 상태
-  const state = { paras: [], lang: 'ko-KR', fontSize: 22, continuous: !IS_MOBILE, stamps: true, eq: true };
+  const state = { paras: [], lang: 'ko-KR', fontSize: 22, continuous: !IS_ANDROID, stamps: true, eq: !IS_MOBILE, cap: true, fixes: [], ver: VERSION };
 
   // 실행 중 상태
   let running = false;          // 사용자가 '듣기'를 켠 상태
@@ -550,6 +638,15 @@
   let storageOk = true;
   let recObj = null;            // 다시 쓰는 음성 인식기 (iOS에서 매번 새로 만들면 효과음·권한 창이 반복될 수 있음)
   let recBusy = false;          // start() 뒤 end 전까지
+  let watchTimer = 0;           // (iOS 연속) 쉬는 순간을 살피는 타이머
+  let biasOk = true;            // Chrome 단어 가중치(phrases) 사용 가능 여부
+  let migrated = '';            // 업데이트로 바뀐 설정 안내
+  // 진단 기록 (최근 한 번 듣기)
+  let diag = null;
+  function newDiag() {
+    return { at: Date.now(), ms: 0, sessions: 0, results: 0, ends: {}, errors: {}, gaps: [], maxGap: 0, lastEndAt: 0,
+             mode: '', eq: false, ua: UA.slice(0, 160) };
+  }
 
   // ---------- DOM ----------
   const $ = (id) => document.getElementById(id);
@@ -561,6 +658,8 @@
   const langSel = $('lang'), banner = $('banner'), noticeEl = $('notice'), noticeText = $('noticeText');
   const toastEl = $('toast'), sheet = $('sheet'), fontVal = $('fontVal');
   const contToggle = $('contToggle'), stampToggle = $('stampToggle'), clearBtn = $('clearBtn');
+  const capEl = $('cap'), capFinal = $('capFinal'), capLive = $('capLive'), capEmpty = $('capEmpty'), capToggle = $('capToggle');
+  const fixesInput = $('fixesInput'), diagText = $('diagText');
   const eqEl = $('eq'), eqCanvas = $('eqCanvas'), eqDb = $('eqDb'), eqLabel = $('eqLabel'), eqAxis = $('eqAxis'), eqToggle = $('eqToggle');
 
   // ---------- 도우미 ----------
@@ -597,6 +696,16 @@
       if (typeof d.continuous === 'boolean') state.continuous = d.continuous;
       if (typeof d.stamps === 'boolean') state.stamps = d.stamps;
       if (typeof d.eq === 'boolean') state.eq = d.eq;
+      if (typeof d.cap === 'boolean') state.cap = d.cap;
+      if (Array.isArray(d.fixes)) state.fixes = d.fixes.filter((f) => Array.isArray(f) && f[0]).map((f) => [String(f[0]), String(f[1] || '')]);
+      // v6 업데이트: 아이폰·아이패드는 연속 인식을 기본으로, 모바일은 소리 막대를 기본으로 끔 (끊김 원인 줄이기)
+      if (!(d.ver >= 6)) {
+        const changed = [];
+        if (IS_IOS && d.continuous === false) { state.continuous = true; changed.push('연속 인식 모드를 켰어요'); }
+        if (IS_MOBILE && d.eq !== false) { state.eq = false; changed.push('소리 막대를 껐어요'); }
+        if (changed.length) migrated = '끊김을 줄이려고 ' + changed.join(', ') + '. 더보기에서 바꿀 수 있어요.';
+      }
+      state.ver = VERSION;
     } catch (_) { /* 저장소를 못 쓰는 환경: 저장 없이 동작 */ }
   }
   function saveNow() {
@@ -680,18 +789,38 @@
       const p = lastPara();
       if (continuesLast(at) && paraEls.has(p.id)) {
         const r = paraEls.get(p.id);
-        liveEl.textContent = (p.segs.length && p.j ? ' ' : '') + interim;
+        liveEl.textContent = (p.segs.length && p.j ? ' ' : '') + applyFixes(interim);
         if (liveEl.parentNode !== r.body) r.body.appendChild(liveEl);
         pendingWrap.remove();
       } else {
-        liveEl.textContent = interim;
+        liveEl.textContent = applyFixes(interim);
         pendingTime.textContent = clock(at);
         if (liveEl.parentNode !== pendingBody) pendingBody.appendChild(liveEl);
         if (log.lastChild !== pendingWrap) log.appendChild(pendingWrap);
       }
     }
     updateEmpty();
+    updateCap();
     follow();
+  }
+  // 실시간 자막 창: 지금 문단의 끝부분 + 아직 확정 안 된 말
+  function updateCap() {
+    const on = !!state.cap && running;
+    capEl.classList.toggle('off', !on);
+    appEl.classList.toggle('cap-on', on);
+    if (!on) return;
+    const p = lastPara();
+    let tail = p && Date.now() - p.end <= CFG.paraGap ? paraText(p) : '';
+    if (tail.length > 80) {
+      tail = tail.slice(-80);
+      const sp = tail.indexOf(' ');
+      if (sp > 0 && sp < 16) tail = tail.slice(sp + 1);
+      tail = '…' + tail;
+    }
+    const j = p ? p.j : joinerFor(state.lang);
+    capFinal.textContent = tail;
+    capLive.textContent = interim ? (tail && j ? ' ' : '') + applyFixes(interim) : '';
+    capEmpty.hidden = !!(tail || interim);
   }
   function follow() {
     if (stick) scroller.scrollTop = scroller.scrollHeight;
@@ -708,6 +837,34 @@
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
   });
 
+  // ---------- 자동 고침 단어장 ----------
+  let fixRules = [];
+  function buildFixRules() {
+    fixRules = [];
+    for (const [from, to] of state.fixes) {
+      const f = clean(from);
+      if (!f) continue;
+      // 띄어쓰기가 달라도 맞도록: 공백은 '있어도 없어도 됨'
+      const src = f.split(' ').map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+      try { fixRules.push([new RegExp(src, 'gi'), to]); } catch (_) {}
+    }
+  }
+  function applyFixes(t) {
+    if (!t || !fixRules.length) return t;
+    let out = t;
+    for (const [re, to] of fixRules) out = out.replace(re, to);
+    return out;
+  }
+  function parseFixes(text) {
+    const out = [];
+    for (const line of String(text || '').split(/\n/)) {
+      const m = line.split(/\s*(?:→|->|=>|=)\s*/);
+      if (m.length >= 2 && clean(m[0])) out.push([clean(m[0]), clean(m.slice(1).join(' '))]);
+    }
+    return out;
+  }
+  function fixesToText() { return state.fixes.map(([a, b]) => `${a} → ${b}`).join('\n'); }
+
   // ---------- 받아쓴 글 확정 ----------
   function commitSegment(raw, s) {
     const t = clean(raw);
@@ -716,18 +873,22 @@
     const segStart = interimSince || now;
 
     // 모바일 브라우저는 같은 문장을 두 번 주거나, 앞 문장을 포함한 '누적' 결과를 주기도 해서 정리
+    // v6: 같은 세션 안에서만 넓게 정리하고, 세션이 바뀐 경우엔 2초 안의 '긴 똑같은 문장'만 중복으로 봄 (짧은 "네" 같은 말이 지워지던 문제)
     if (IS_MOBILE) {
-      const base = (s && s.last) || (lastCommit && now - lastCommit.at < CFG.dupWindow ? lastCommit : null);
+      const same = s && s.last;
+      const cross = !same && lastCommit && now - lastCommit.at < CFG.echoMs ? lastCommit : null;
+      const base = same || cross;
       if (base) {
-        const a = squash(base.text), b = squash(t);
-        if (b === a || (a && a.startsWith(b))) return;
-        if (a && b.startsWith(a)) {
+        const a = squash(base.raw), b = squash(t);
+        if (same && (b === a || (a && a.startsWith(b)))) { diagNote('dup'); return; }
+        if (cross && b === a && b.length >= 4) { diagNote('dup'); return; }
+        if (a && b.startsWith(a) && b !== a) {
           const p = state.paras.find((x) => x.id === base.ref.pid);
           if (p && p.segs[base.ref.idx] !== undefined) {
-            p.segs[base.ref.idx] = t;
+            p.segs[base.ref.idx] = applyFixes(t);
             p.end = now;
             updatePara(p);
-            const rec = { text: t, at: now, ref: base.ref };
+            const rec = { text: p.segs[base.ref.idx], raw: t, at: now, ref: base.ref };
             if (s) s.last = rec;
             lastCommit = rec;
             scheduleSave();
@@ -743,10 +904,10 @@
       state.paras.push(p);
       appendPara(p);
     }
-    p.segs.push(t);
+    p.segs.push(applyFixes(t));
     p.end = now;
     updatePara(p);
-    const rec = { text: t, at: now, ref: { pid: p.id, idx: p.segs.length - 1 } };
+    const rec = { text: p.segs[p.segs.length - 1], raw: t, at: now, ref: { pid: p.id, idx: p.segs.length - 1 } };
     if (s) s.last = rec;
     lastCommit = rec;
     scheduleSave();
@@ -756,8 +917,8 @@
     let t = clean(txt);
     const base = s && s.last;
     if (t && base && IS_MOBILE) {
-      if (t.startsWith(base.text)) t = t.slice(base.text.length).trim();
-      else if (squash(base.text).startsWith(squash(t))) t = '';
+      if (t.startsWith(base.raw)) t = t.slice(base.raw.length).trim();
+      else if (squash(base.raw).startsWith(squash(t))) t = '';
     }
     if (t && !interim) interimSince = Date.now();
     if (!t) interimSince = 0;
@@ -791,7 +952,8 @@
     try { r.abort(); } catch (_) {}
   }
   function newSession(r) {
-    return { rec: r, startedAt: Date.now(), started: false, hadResult: false, error: '', finals: new Set(), last: null, ended: false };
+    return { rec: r, startedAt: Date.now(), started: false, hadResult: false, error: '', finals: new Set(), last: null, ended: false,
+             lastResultAt: 0, textLen: 0, soft: '' };
   }
 
   function startSession() {
@@ -813,8 +975,10 @@
         r.interimResults = true;
         r.continuous = !!state.continuous;
         try { r.maxAlternatives = 1; } catch (_) {}
+        setBias(r);
         r.start();
         recBusy = true;
+        if (diag) diag.sessions++;
         return;
       } catch (_) {
         s.ended = true;
@@ -829,6 +993,14 @@
 
   function onStartEv(s) {
     s.started = true;
+    s.lastResultAt = Date.now();
+    if (diag && diag.lastEndAt) {
+      const gap = Date.now() - diag.lastEndAt;
+      diag.gaps.push(gap);
+      if (diag.gaps.length > 400) diag.gaps.shift();
+      if (gap > diag.maxGap) diag.maxGap = gap;
+      diag.lastEndAt = 0;
+    }
     if (!running) return;
     setUI('listening');
     if (state.eq && !eq.active && !eq.starting) eqStart();   // 받아쓰기가 마이크를 잡은 뒤에 소리 막대 시작
@@ -836,9 +1008,11 @@
 
   function onResult(s, e) {
     s.hadResult = true;
+    s.lastResultAt = Date.now();
     errorStreak = 0;
     emptyStreak = 0;
     eq.voiceMs = 0;
+    if (diag) diag.results++;
     if (running && mode !== 'listening') setUI('listening');
     const list = e.results || [];
     let live = '';
@@ -853,11 +1027,14 @@
         live += txt;
       }
     }
+    s.textLen = live.length;
     setInterim(live, s);
   }
 
   function onError(s) {
     const code = s.error;
+    diagNote('err:' + code);
+    if (code === 'phrases-not-supported') { biasOk = false; return; }   // 단어 가중치를 못 쓰는 브라우저: 빼고 다시 시작
     if (code === 'no-speech' || code === 'aborted') return; // 조용함·중단은 정상: 끝나면 이어서 다시 들음
     if (document.hidden) return;
     const micErr = code === 'audio-capture' || code === 'not-allowed' || code === 'service-not-allowed';
@@ -888,6 +1065,11 @@
 
   function onEnd(s) {
     s.ended = true;
+    if (diag) {
+      diag.lastEndAt = Date.now();
+      const why = s.soft || (s.error ? 'err' : (s.hadResult ? 'end' : 'empty'));
+      diag.ends[why] = (diag.ends[why] || 0) + 1;
+    }
     if (interim) { commitSegment(interim, s); setInterim('', null); }
     if (cur === s) cur = null;
     clearTimeout(stopGuard); stopGuard = 0;
@@ -895,7 +1077,7 @@
     if (!running) { setUI('idle'); return; }
     if (document.hidden) { eqStop(); setUI('paused'); return; }
 
-    const bad = !!s.error && s.error !== 'no-speech' && s.error !== 'aborted';
+    const bad = !!s.error && s.error !== 'no-speech' && s.error !== 'aborted' && s.error !== 'phrases-not-supported';
     const tooFast = !s.started && !s.hadResult && Date.now() - s.startedAt < 400;
     if (bad || tooFast) errorStreak++;
     else if (!s.hadResult) emptyStreak++;
@@ -908,8 +1090,62 @@
       return;
     }
     setUI(mode === 'starting' && !s.started ? 'starting' : 'listening');
-    const delay = errorStreak ? Math.min(400 * errorStreak, 2000) : (emptyStreak > 3 ? 400 : (IS_IOS ? 120 : 40));
+    // v6: 바로 다시 시작 (v5는 아이폰에서 0.12초, 오류 뒤 최대 2초 쉬었음)
+    const delay = errorStreak ? Math.min(250 * (errorStreak - 1), 1500) : (emptyStreak > 5 ? 200 : 0);
     restartTimer = setTimeout(startSession, delay);
+  }
+
+  // (아이폰·아이패드 연속 모드) 말을 쉬는 순간에만 조용히 다시 시작해서, 말하는 도중에 끊기지 않게 함
+  function watchTick() {
+    const s = cur;
+    if (!running || !s || s.ended || !s.started || !s.rec || !state.continuous || !IS_IOS) return;
+    const now = Date.now();
+    const quiet = now - s.lastResultAt;
+    const hasText = !!interim || s.hadResult;
+    const long = s.textLen > CFG.bufMax || now - s.startedAt > CFG.sessionMax;
+    let why = '';
+    if (hasText && quiet >= CFG.pauseMs) why = 'pause';
+    else if (hasText && long && quiet >= CFG.shortPauseMs) why = 'long';
+    else if (!hasText && quiet >= CFG.idleRestart) why = 'idle';
+    if (!why) return;
+    s.soft = why;
+    try { s.rec.stop(); } catch (_) {}
+    clearTimeout(stopGuard);
+    stopGuard = setTimeout(() => { if (cur === s && !s.ended) { dropRecognizer(); onEnd(s); } }, 1500);
+  }
+  // Chrome: 단어장의 '고칠 말'을 인식기에 미리 알려 그 단어로 더 잘 알아듣게 함 (지원하는 브라우저만)
+  function setBias(r) {
+    if (!biasOk || !window.SpeechRecognitionPhrase || !('phrases' in r)) return;
+    try {
+      const words = state.fixes.map((f) => clean(f[1])).filter((w) => w && w.length <= 40).slice(0, 50);
+      r.phrases = words.map((w) => new window.SpeechRecognitionPhrase(w, 3.0));
+    } catch (_) { biasOk = false; }
+  }
+  function diagNote(key) {
+    if (!diag) return;
+    if (key.startsWith('err:')) { const c = key.slice(4); diag.errors[c] = (diag.errors[c] || 0) + 1; }
+    else diag.ends[key] = (diag.ends[key] || 0) + 1;
+  }
+  function diagSummary(d) {
+    if (!d) return '아직 기록이 없어요.';
+    const g = d.gaps.length ? Math.round(d.gaps.reduce((a, b) => a + b, 0) / d.gaps.length) : 0;
+    const mins = Math.max(1, Math.round((d.ms || (Date.now() - d.at)) / 60000));
+    const LBL = { end: '말 끝남', empty: '조용함', pause: '쉬는 순간 재시작', long: '긴 문장 재시작', idle: '새로 고침', err: '오류로 끝남', dup: '중복 정리' };
+    const ends = Object.entries(d.ends).map(([k, v]) => `${LBL[k] || k} ${v}`).join(', ') || '없음';
+    const errs = Object.entries(d.errors).map(([k, v]) => `${k} ${v}`).join(', ') || '없음';
+    return `v${VERSION} · ${new Date(d.at).toLocaleString('ko-KR')} · 약 ${mins}분\n`
+      + `모드: ${d.mode} · 소리 막대: ${d.eq ? '켬' : '끔'}\n`
+      + `세션 ${d.sessions}회 · 결과 ${d.results}회\n`
+      + `재시작 공백: 평균 ${(g / 1000).toFixed(2)}초 · 최대 ${(d.maxGap / 1000).toFixed(2)}초\n`
+      + `끝난 이유: ${ends}\n오류: ${errs}`;
+  }
+  function diagSave() {
+    if (!diag) return;
+    diag.ms = Date.now() - diag.at;
+    try { localStorage.setItem(DIAG_KEY, JSON.stringify(diag)); } catch (_) {}
+  }
+  function diagLoad() {
+    try { return JSON.parse(localStorage.getItem(DIAG_KEY) || 'null'); } catch (_) { return null; }
   }
 
   // 언어·모드를 바꿨을 때 지금 세션을 끊고 새 설정으로 다시 듣기
@@ -933,6 +1169,11 @@
     errorStreak = 0;
     emptyStreak = 0;
     listenStart = Date.now();
+    diag = newDiag();
+    diag.mode = (state.continuous ? (IS_IOS ? '연속(쉬는 순간 재시작)' : '연속') : '문장마다 재시작') + (IS_IOS ? ' · iOS' : IS_ANDROID ? ' · Android' : ' · PC');
+    diag.eq = !!state.eq;
+    clearInterval(watchTimer);
+    watchTimer = setInterval(watchTick, 250);
     setUI('starting');
     startSession();          // iOS는 버튼을 누른 그 순간에 시작해야 권한을 물을 수 있음
     eqPrime();               // 소리 막대용 오디오도 같은 터치 안에서 준비
@@ -945,6 +1186,8 @@
   function stopAll(msg, kind) {
     running = false;
     clearTimeout(restartTimer); restartTimer = 0;
+    clearInterval(watchTimer); watchTimer = 0;
+    diagSave();
     releaseWakeLock();
     stopTick();
     eqStop();
@@ -961,10 +1204,13 @@
     }
   }
 
-  micBtn.addEventListener('click', () => { if (running) stopAll(); else startListening(); });
+  micBtn.addEventListener('click', () => {
+    try { if (running) stopAll(); else startListening(); }
+    catch (err) { if (window.__diagShow) window.__diagShow('버튼 처리 중 ' + (err && err.message || err)); }
+  });
 
   // ---------- 상태 표시 ----------
-  const LABEL = { idle: '대기 중', starting: '마이크 준비 중…', listening: '듣는 중', finishing: '마무리하는 중…', paused: '일시 정지 · 화면으로 돌아오면 이어서 들어요' };
+  const LABEL = { idle: '대기 중 · v6', starting: '마이크 준비 중…', listening: '듣는 중', finishing: '마무리하는 중…', paused: '일시 정지 · 화면으로 돌아오면 이어서 들어요' };
   function setUI(m) {
     if (m) mode = m;
     root.dataset.state = mode;
@@ -974,6 +1220,7 @@
     elapsedEl.hidden = !running;
     micBtn.setAttribute('aria-label', running ? '받아쓰기 멈추기' : '받아쓰기 시작');
     micBtn.setAttribute('aria-pressed', String(running));
+    updateCap();
   }
   function showNotice(text, kind) {
     noticeText.textContent = text;
@@ -989,6 +1236,8 @@
     const sec = Math.max(0, Math.floor((Date.now() - listenStart) / 1000));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
     elapsedEl.textContent = h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`;
+    updateCap();
+    if (sec % 10 === 0) diagSave();
   }
 
   function showEnvHelp(nudge) {
@@ -1186,6 +1435,8 @@
   function setEqSetting(on) {
     state.eq = !!on;
     eqToggle.checked = state.eq;
+  capToggle.checked = state.cap;
+  buildFixRules();
     scheduleSave();
   }
 
@@ -1411,6 +1662,8 @@
 
   // ---------- 설정 시트 ----------
   function openSheet() {
+    diagText.textContent = diagSummary(diag || diagLoad());
+    fixesInput.value = fixesToText();
     sheet.hidden = false;
     requestAnimationFrame(() => requestAnimationFrame(() => sheet.classList.add('open')));
     $('closeSheet').focus({ preventScroll: true });
@@ -1442,6 +1695,12 @@
     toast(state.continuous ? '연속 인식 모드를 켰어요' : '연속 인식 모드를 껐어요');
     restartNow();
   });
+  capToggle.addEventListener('change', () => {
+    state.cap = capToggle.checked;
+    scheduleSave();
+    updateCap();
+    toast(state.cap ? '자막 창을 켰어요' : '자막 창을 껐어요');
+  });
   eqToggle.addEventListener('change', () => {
     setEqSetting(eqToggle.checked);
     if (state.eq) {
@@ -1453,6 +1712,34 @@
       eqStop();
       toast('소리 막대를 껐어요');
     }
+  });
+
+  $('fixesSave').addEventListener('click', () => {
+    state.fixes = parseFixes(fixesInput.value);
+    buildFixRules();
+    fixesInput.value = fixesToText();
+    saveNow();
+    toast(state.fixes.length ? `단어장 ${state.fixes.length}개를 저장했어요` : '단어장을 비웠어요');
+    restartNow();
+  });
+  $('fixesApply').addEventListener('click', () => {
+    state.fixes = parseFixes(fixesInput.value);
+    buildFixRules();
+    let n = 0;
+    for (const p of state.paras) {
+      p.segs = p.segs.map((t) => { const f = applyFixes(t); if (f !== t) n++; return f; });
+    }
+    renderAll();
+    saveNow();
+    toast(n ? `${n}곳을 고쳤어요` : '고칠 곳이 없었어요');
+  });
+  $('diagCopy').addEventListener('click', async () => {
+    const d = diag || diagLoad();
+    const txt = diagSummary(d) + (d ? `\n재시작 공백(ms, 최근): ${d.gaps.slice(-40).join(' ')}\n${d.ua}` : '');
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; } catch (_) {}
+    if (!ok) ok = legacyCopy(txt);
+    toast(ok ? '진단 기록을 복사했어요' : '복사하지 못했어요');
   });
 
   langSel.addEventListener('change', () => {
@@ -1507,8 +1794,10 @@
   renderAll();
   setUI('idle');
   showEnvHelp(false);
+  if (migrated) { showNotice(migrated, 'info'); saveNow(); }
   requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
-  if (CFG.debug) window.__liveStt = { eq, state, EQB };
+  if (CFG.debug) window.__liveStt = { eq, state, EQB, get diag() { return diag; }, applyFixes };
+  root.dataset.ready = 'v6';
 })();
 </script>
 </body>
